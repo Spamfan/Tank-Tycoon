@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Tank Tycoon (Pre-Alpha 4.3)</title>
+    <title>Tank Tycoon (Pre-Alpha 4.5)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <style>
@@ -231,6 +231,31 @@
             pointer-events: none; 
             font-size: 12px;
         }
+        #on-screen-console {
+            position: fixed;
+            bottom: 50px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #00FF00;
+            font-family: monospace;
+            padding: 8px;
+            border-radius: 5px;
+            z-index: 300;
+            display: none;
+            font-size: 14px;
+            min-width: 150px;
+        }
+        .console-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 12px 24px;
+            font-size: 18px;
+            user-select: none;
+            width: 100%;
+            justify-content: center;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -267,6 +292,7 @@
     <div id="achievement-notification"></div>
     <div id="debug-panel"></div>
     <div id="ping-spy-panel"></div>
+    <div id="on-screen-console"></div>
     <div id="transition-overlay"></div>
     <div id="saving-overlay" class="modal"><div class="modal-content"><h2>Saving game...</h2></div></div>
     <div id="autosave-notification"></div>
@@ -280,7 +306,7 @@
     <div id="start-over-confirm-modal" class="modal"><div class="modal-content"><h2 class="text-3xl">DELETE WORLD?</h2><p>A new game will override your previous progress in this slot.</p><div class="flex gap-4"><button id="start-over-confirm-yes" class="modal-button">YES</button><button id="start-over-confirm-no" class="modal-button confirm-button">NO</button></div></div></div>
     <div id="restart-confirm-modal" class="modal"><div class="modal-content"><h2 class="text-3xl">RESTART GAME?</h2><p>All progress will be lost.</p><div class="flex gap-4"><button id="restart-confirm-yes" class="modal-button">YES</button><button id="restart-confirm-no" class="modal-button confirm-button">NO</button></div></div></div>
     <div id="pc-controls-modal" class="modal"><div class="modal-content"><h2 class="text-3xl">PC CONTROLS</h2><div id="pc-controls-list" class="text-left text-lg"></div><button id="pc-controls-back-btn" class="modal-button confirm-button">BACK</button></div></div>
-    <div id="options-modal" class="modal"><div class="modal-content"><h2 class="text-3xl">OPTIONS</h2><button id="options-achievements-btn" class="modal-button info-button">🏆 ACHIEVEMENTS</button><button id="options-controls-btn" class="modal-button info-button">CONTROLS</button><div id="options-audio-toggle" class="audio-toggle info-button"><span class="audio-toggle-label">AUDIO:</span><span id="audio-toggle-on" class="audio-toggle-option">ON</span><span id="audio-toggle-off" class="audio-toggle-option">OFF</span></div><button id="options-delete-world-btn" class="modal-button" style="margin-top: 2rem;">DELETE WORLD</button><button id="options-back-btn" class="modal-button confirm-button">BACK</button></div></div>
+    <div id="options-modal" class="modal"><div class="modal-content"><h2 class="text-3xl">OPTIONS</h2><button id="options-achievements-btn" class="modal-button info-button">🏆 ACHIEVEMENTS</button><button id="options-controls-btn" class="modal-button info-button">CONTROLS</button><div id="options-audio-toggle" class="audio-toggle info-button"><span class="audio-toggle-label">AUDIO:</span><span id="audio-toggle-on" class="audio-toggle-option">ON</span><span id="audio-toggle-off" class="audio-toggle-option">OFF</span></div><label class="console-toggle-container info-button"><input type="checkbox" id="toggle-console-checkbox">Show Console Log</label><button id="options-delete-world-btn" class="modal-button" style="margin-top: 2rem;">DELETE WORLD</button><button id="options-back-btn" class="modal-button confirm-button">BACK</button></div></div>
     
     <div id="garage-modal" class="modal">
         <div id="garage-ui-content" class="w-11/12 max-w-4xl h-5/6 max-h-[700px] bg-gray-800 rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden">
@@ -356,7 +382,7 @@
 
 <script>
 // --- SETUP & STATE ---
-const GAME_VERSION = "Pre-Alpha 4.3";
+const GAME_VERSION = "Pre-Alpha 4.5";
 const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
 const gameContainer = document.getElementById('game-container');
 const world = { width: 4000, height: 4000, gridSize: 40, chunkSize: 16 * 40 };
@@ -397,6 +423,7 @@ const openModal = (id) => {
 let isPlayerInGarage = false;
 let lastPickupSoundTime = 0;
 let isDebugVisible = false;
+let isConsoleVisible = false;
 let isVersionVisible = true;
 let isPingSpyVisible = false; let isLoading = false;
 let isGameBlocked = false; let justDiedWithLoot = false;
@@ -2441,6 +2468,10 @@ function gameLoop(timestamp) {
     if (!lastTime) lastTime = timestamp;
     const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
+
+    if (isConsoleVisible) {
+        document.getElementById('on-screen-console').textContent = `dT: ${deltaTime.toFixed(2)}ms`;
+    }
     
 // X1.2: Silent, more frequent autosave
     if (!isPlayerInGarage && timestamp - lastAutosaveTime > 15000) { // Autosave every 15 seconds
@@ -2536,10 +2567,18 @@ function setupGlobalListeners() {
 
     const toggleMasterAudio = () => {
         if (!isAudioInitialized) return;
-        isMuted = !isM్యూted;
+        isMuted = !isMuted;
         Tone.getDestination().mute = isMuted;
         updateAudioToggleUI();
     };
+
+    const consoleCheckbox = document.getElementById('toggle-console-checkbox');
+    if (consoleCheckbox) {
+        consoleCheckbox.addEventListener('change', (e) => {
+            isConsoleVisible = e.target.checked;
+            document.getElementById('on-screen-console').style.display = isConsoleVisible ? 'block' : 'none';
+        });
+    }
 
     document.getElementById('pc-controls-list').innerHTML = `
         <p><span class="font-bold text-yellow-300">W,A,S,D:</span> Move</p>
