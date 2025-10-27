@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Tank Tycoon (Pre-Alpha 4.6)</title>
+    <title>Tank Tycoon (Pre-Alpha 4.7)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <style>
@@ -37,7 +37,7 @@
         .desktop-view .header-left, .desktop-view .header-right { pointer-events: auto; display: flex; align-items: center; gap: 1rem; }
         .desktop-view .header-right { background: rgba(0, 0, 0, 0.3); padding: 8px 12px; border-radius: 8px; }
         
-        canvas { display: block; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2); flex-shrink: 0; image-rendering: pixelated; }
+        canvas { display: block; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2); flex-shrink: 0; image-rendering: pixelated; transform: translateZ(0); }
         .mobile-view .ui-container { position: fixed; top: 10px; right: 10px; display: flex; align-items: center; gap: 1rem; background: rgba(0, 0, 0, 0.3); padding: 8px 12px; border-radius: 8px; z-index: 10; }
         
         #health-display, #money-display, #ammo-display, #blueprint-display {
@@ -382,7 +382,7 @@
 
 <script>
 // --- SETUP & STATE ---
-const GAME_VERSION = "Pre-Alpha 4.6";
+const GAME_VERSION = "Pre-Alpha 4.7";
 const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
 const gameContainer = document.getElementById('game-container');
 const world = { width: 4000, height: 4000, gridSize: 40, chunkSize: 16 * 40 };
