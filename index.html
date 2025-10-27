@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Tank Tycoon (Pre-Alpha 3.1b)</title>
+    <title>Tank Tycoon (Pre-Alpha 4.3)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <style>
@@ -356,7 +356,7 @@
 
 <script>
 // --- SETUP & STATE ---
-const GAME_VERSION = "Pre-Alpha 3.1b";
+const GAME_VERSION = "Pre-Alpha 4.3";
 const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
 const gameContainer = document.getElementById('game-container');
 const world = { width: 4000, height: 4000, gridSize: 40, chunkSize: 16 * 40 };
@@ -433,28 +433,60 @@ const garageData = { 'Turret': [ { id: 'standardCannon', name: 'Standard Cannon'
 
 // --- ECONOMY & BLUEPRINT DATA ---
 const cashBayUpgrades = [
-    { cost: 10, passive: 0.10, active: 0.50 }, { cost: 50, passive: 0.50, active: 2.50 },
-    { cost: 250, passive: 2.50, active: 12.50 }, { cost: 1000, passive: 10, active: 50 },
-    { cost: 5000, passive: 50, active: 250 }, { cost: 25000, passive: 250, active: 1250 },
-    { cost: 100000, passive: 1000, active: 5000 }, { cost: 500000, passive: 5000, active: 25000 },
-    { cost: 2500000, passive: 25000, active: 125000 }, { cost: 10000000, passive: 100000, active: 500000 }
+    { cost: 25, passive: 0.10, active: 0.20 }, { cost: 100, passive: 0.20, active: 0.50 },
+    { cost: 500, passive: 1, active: 2.5 }, { cost: 2500, passive: 5, active: 10 },
+    { cost: 5000, passive: 10, active: 25 }, { cost: 25000, passive: 100, active: 250 },
+    { cost: 100000, passive: 500, active: 1000 }, { cost: 500000, passive: 2500, active: 5000 },
+    { cost: 5000000, passive: 5000, active: 10000 }, { cost: 25000000, passive: 25000, active: 50000 }
 ];
 const medBayUpgrades = [ 
-    { cost: 0, heal: 0, maxHp: 0 }, { cost: 10, heal: 1, maxHp: 5 }, 
-    { cost: 50, heal: 1, maxHp: 15 }, { cost: 250, heal: 2, maxHp: 15 }, 
-    { cost: 1000, heal: 2, maxHp: 25 }, { cost: 5000, heal: 3, maxHp: 25 }, 
-    { cost: 25000, heal: 3, maxHp: 40 }, { cost: 100000, heal: 5, maxHp: 40 }, 
-    { cost: 500000, heal: 5, maxHp: 60 }, { cost: 2500000, heal: 0, maxHp: 80 }, 
-    { cost: 10000000, heal: 10, maxHp: 100 }
+    { cost: 0, heal: 0, maxHp: 0 }, { cost: 25, heal: 0.25, maxHp: 5 }, 
+    { cost: 100, heal: 0.5, maxHp: 5 }, { cost: 500, heal: 0.75, maxHp: 5 }, 
+    { cost: 1000, heal: 1, maxHp: 10 }, { cost: 5000, heal: 3, maxHp: 10 }, 
+    { cost: 25000, heal: 3, maxHp: 15 }, { cost: 100000, heal: 4, maxHp: 20 }, 
+    { cost: 500000, heal: 5, maxHp: 30 }, { cost: 2500000, heal: 7, maxHp: 40 }, 
+    { cost: 10000000, heal: 10, maxHp: 50 }
 ];
 const GARAGE_UNLOCK_COST = 250;
 
 // --- DYNAMIC ENGINE SOUND SYSTEM ---
-let engineAudioContext; let engineMasterVolumeNode; let engineFadeNode; let engineSourceNode;
+let enginePlayer; let engineFadeNode;
 const engineAudioUrl = 'https://dl.dropboxusercontent.com/scl/fi/3vkvoeltskmfuhnuoly2m/engine_trimmed_loopable.mp3?rlkey=d844chyrjkriy4ph61cyitn04&st=ehu6kt81';
-const FADE_TIME = 0.4; const MASTER_VOLUME = 4.0; const PITCH_START = 0.5; const PITCH_END = 1.0;
-async function initEngineSound() { if (engineAudioContext) return; engineAudioContext = new (window.AudioContext || window.webkitAudioContext)(); if (engineAudioContext.state === 'suspended') { await engineAudioContext.resume(); } engineMasterVolumeNode = engineAudioContext.createGain(); engineMasterVolumeNode.gain.value = MASTER_VOLUME; engineFadeNode = engineAudioContext.createGain(); engineFadeNode.gain.value = 0; engineMasterVolumeNode.connect(engineFadeNode); engineFadeNode.connect(engineAudioContext.destination); try { const response = await fetch(engineAudioUrl); const arrayBuffer = await response.arrayBuffer(); const audioBuffer = await engineAudioContext.decodeAudioData(arrayBuffer); engineSourceNode = engineAudioContext.createBufferSource(); engineSourceNode.buffer = audioBuffer; engineSourceNode.loop = true; engineSourceNode.playbackRate.value = PITCH_START; engineSourceNode.connect(engineMasterVolumeNode); engineSourceNode.start(0); } catch (error) { console.error("Error loading engine audio file:", error); } }
-function updateEngineSound(deltaTime) { if (!engineSourceNode || !engineAudioContext || !player) return; const isTryingToMove = (touchState.moveStick.x !== 0 || touchState.moveStick.y !== 0) || keys.w || keys.a || keys.s || keys.d; const targetVolume = isTryingToMove ? 1.0 : 0.0; const speedRatio = Math.min(1, Math.abs(player.currentSpeed) / 2.64); let targetPitch = PITCH_START + (PITCH_END - PITCH_START) * speedRatio; if (isTryingToMove && speedRatio < 0.1) { targetPitch = PITCH_START; } targetPitch *= player.pitchPenalty; const now = engineAudioContext.currentTime; engineFadeNode.gain.setTargetAtTime(targetVolume, now, FADE_TIME); engineSourceNode.playbackRate.setTargetAtTime(targetPitch, now, 0.05); if (player.pitchPenalty < 1) { player.pitchPenalty = Math.min(1, player.pitchPenalty + (deltaTime / 300)); } }
+const FADE_TIME = 0.4; const MASTER_VOLUME = 10.8; const PITCH_START = 0.5; const PITCH_END = 1.0;
+async function initEngineSound() {
+    if (enginePlayer) return;
+    try {
+        engineFadeNode = new Tone.Gain(0).toDestination();
+        enginePlayer = new Tone.Player({
+            url: engineAudioUrl,
+            loop: true,
+            playbackRate: PITCH_START,
+            volume: MASTER_VOLUME,
+            onload: () => {
+                console.log("Engine audio file loaded, starting playback.");
+                enginePlayer.start();
+            },
+        }).connect(engineFadeNode);
+    } catch (error) {
+        console.error("Error initializing engine sound with Tone.js:", error);
+    }
+}
+function updateEngineSound(deltaTime) {
+    if (!enginePlayer || !engineFadeNode || !player) return;
+    const isTryingToMove = (touchState.moveStick.x !== 0 || touchState.moveStick.y !== 0) || keys.w || keys.a || keys.s || keys.d;
+    const targetVolume = isTryingToMove ? 1.0 : 0.0;
+    const speedRatio = Math.min(1, Math.abs(player.currentSpeed) / 2.64);
+    let targetPitch = PITCH_START + (PITCH_END - PITCH_START) * speedRatio;
+    if (isTryingToMove && speedRatio < 0.1) { targetPitch = PITCH_START; }
+    targetPitch *= player.pitchPenalty;
+
+    engineFadeNode.gain.rampTo(targetVolume, FADE_TIME);
+    enginePlayer.playbackRate = targetPitch;
+
+    if (player.pitchPenalty < 1) {
+        player.pitchPenalty = Math.min(1, player.pitchPenalty + (deltaTime / 300));
+    }
+}
 
 // --- INITIALIZATION & STATE MANAGEMENT ---
 function initAchievements() {
@@ -592,12 +624,12 @@ async function initAudio() {
             // X1.3: Use correct, direct-download link for Nitro
             nitro: new Tone.Player("https://raw.githubusercontent.com/Spamfan/Audio-host/main/Nitro1sec.mp3").toDestination()
         }; 
-        sfx.shoot.volume.value = -8; sfx.hit.volume.value = -6; sfx.explode.volume.value = -4; sfx.pickup.volume.value -= 6; sfx.hurt.volume.value -= 6; sfx.splash.volume.value -= 6; sfx.woodBreak.volume.value -= 6; sfx.rockCrack.volume.value -= 6; sfx.lowHealth.volume.value = 0; sfx.block.volume.value = -6; sfx.ping.volume.value = -10; sfx.overworldAmbience.volume.value = -10; sfx.overworldAmbience.loop = true; sfx.wastelandAmbience.volume.value = -8; sfx.wastelandAmbience.loop = true; sfx.uiClick.volume.value = -6; sfx.success.volume.value = -10; sfx.reload.volume.value = -5; 
+        sfx.shoot.volume.value = -8; sfx.hit.volume.value = -6; sfx.explode.volume.value = -4; sfx.pickup.volume.value -= 6; sfx.hurt.volume.value -= 6; sfx.splash.volume.value -= 6; sfx.woodBreak.volume.value -= 6; sfx.rockCrack.volume.value -= 6; sfx.lowHealth.volume.value = 0; sfx.block.volume.value = -6; sfx.ping.volume.value = -10; sfx.overworldAmbience.volume.value = -6; sfx.overworldAmbience.loop = true; sfx.wastelandAmbience.volume.value = -4; sfx.wastelandAmbience.loop = true; sfx.uiClick.volume.value = -6; sfx.success.volume.value = -10; sfx.reload.volume.value = -5; 
         sfx.nitro.volume.value = 10; // Set nitro volume
         console.log("SFX Audio initialized. Pre-loading...");
         await Tone.loaded();
+        await initEngineSound();
         console.log("Audio pre-loading complete.");
-        await initEngineSound(); 
     } catch (e) { console.error("Could not start audio context:", e); } 
 }
 function playSound(soundName, ...args) { 
@@ -785,12 +817,9 @@ function generateWorld(worldId) {
     const worldSeed = `${masterSeed}_${worldName}`;
     setSeed(worldSeed.split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a }, 0));
 
-    const persistentPickups = worldState.pickups.filter(p => p.type === 'cashBag');
-    worldState.worldObjects = []; worldState.enemies = []; worldState.pickups = []; worldState.decorations = []; worldState.baseDecorations = []; worldState.activeBursts = [];
-    worldState.pickups.push(...persistentPickups);
+    worldState.worldObjects = []; worldState.enemies = []; worldState.decorations = []; worldState.baseDecorations = []; worldState.activeBursts = [];
 
     generateBase();
-
     const cols = world.width / world.gridSize;
     const rows = world.height / world.gridSize;
     worldState.tileMap = Array.from({ length: rows }, () => Array(cols).fill(null));
@@ -1081,28 +1110,42 @@ function preGenerateAllFloorLoot() {
     for (let worldId = 0; worldId < 3; worldId++) { // Loop through Overworld, Wasteland, Desert
         for (let chunkY = 0; chunkY < chunksY; chunkY++) {
             for (let chunkX = 0; chunkX < chunksX; chunkX++) {
-                // NOTE: Using Math.random() here is intentional to make floor loot different on every playthrough.
                 if (Math.random() < 0.3) { // 30% chance to spawn loot
-                    const lootOptions = [
-                        { type: 'money', value: 10 }, { type: 'money', value: 25 },
-                        { type: 'money', value: 50 }, { type: 'money', value: 100 },
-                        { type: 'money', value: 1000 }, { type: 'heart', count: 1 }
-                    ];
-                    let chosenLoot = {...lootOptions[Math.floor(Math.random() * lootOptions.length)]};
+                    let chosenLoot;
+                    const rand = Math.random();
+                    
+                    switch(worldId) {
+                        case 0: // Overworld
+                            if (rand < 0.325) chosenLoot = { type: 'money', value: 10 };
+                            else if (rand < 0.65) chosenLoot = { type: 'heart' };
+                            else if (rand < 0.85) chosenLoot = { type: 'money', value: 25 };
+                            else if (rand < 0.95) chosenLoot = { type: 'money', value: 50 };
+                            else chosenLoot = { type: 'money', value: 100 };
+                            break;
+                        case 1: // Wasteland
+                            if (rand < 0.325) chosenLoot = { type: 'money', value: 100 };
+                            else if (rand < 0.65) chosenLoot = { type: 'heart' };
+                            else if (rand < 0.85) chosenLoot = { type: 'money', value: 250 };
+                            else if (rand < 0.95) chosenLoot = { type: 'money', value: 500 };
+                            else chosenLoot = { type: 'money', value: 1000 };
+                            break;
+                        case 2: // Desert
+                            if (rand < 0.325) chosenLoot = { type: 'money', value: 1000 };
+                            else if (rand < 0.65) chosenLoot = { type: 'blueHeart' };
+                            else if (rand < 0.85) chosenLoot = { type: 'money', value: 2500 };
+                            else if (rand < 0.95) chosenLoot = { type: 'money', value: 10000 };
+                            else chosenLoot = { type: 'money', value: 25000 };
+                            break;
+                    }
+
                     const spawnX = chunkX * world.chunkSize + Math.random() * world.chunkSize;
                     const spawnY = chunkY * world.chunkSize + Math.random() * world.chunkSize;
-                    
-                    if (chosenLoot.type === 'money') {
-                        if (worldId === 2) { // Desert
-                            chosenLoot.value *= 100;
-                        } else if (worldId === 1) { // Wasteland
-                            chosenLoot.value *= 10;
-                        }
-                    }
 
                     if (!isInsideRect(spawnX, spawnY, worldState.base)) {
                         if (chosenLoot.type === 'heart') {
                             worldState.pickups.push({type:'heart', x: spawnX, y: spawnY, radius: 15, worldId: worldId });
+                        } else if (chosenLoot.type === 'blueHeart') {
+                            worldState.pickups.push({type:'blueHeart', x: spawnX, y: spawnY, radius: 18, worldId: worldId });
                         } else {
                             worldState.pickups.push({type:'money', value: chosenLoot.value, x: spawnX, y: spawnY, radius: 10, worldId: worldId });
                         }
@@ -1445,6 +1488,10 @@ function updateEnemies() {
 }
 function updateBursts() { const now = Date.now(); for (let i = worldState.activeBursts.length - 1; i >= 0; i--) { const burst = worldState.activeBursts[i]; if (now >= burst.nextShotTime) { if ((burst.owner === 'player' && (player.isDead || isPlayerInGarage))) { worldState.activeBursts.splice(i, 1); continue; } playUrlSound("shoot", burst.owner); const spawnDist = burst.ownerWidth / 2; worldState.bullets.push({ owner: burst.owner, x: burst.x + Math.cos(burst.angle) * spawnDist, y: burst.y + Math.sin(burst.angle) * spawnDist, dx: Math.cos(burst.angle) * burst.bulletSpeed, dy: Math.sin(burst.angle) * burst.bulletSpeed, radius: burst.owner === 'player' ? 5 : 6, damage: burst.bulletDamage }); burst.shotsFired++; burst.nextShotTime = now + burst.delay; if (burst.shotsFired >= burst.totalShots) { worldState.activeBursts.splice(i, 1); } } } }
 function dropLoot(x, y, enemyType) {
+    // 3.3 Blueprint Hardening: Check if a blueprint already exists on the floor.
+    const mgBlueprintOnFloor = worldState.pickups.some(p => p.type === 'blueprint' && p.id === 'machineGun');
+    const nbBlueprintOnFloor = worldState.pickups.some(p => p.type === 'blueprint' && p.id === 'nitroBoost');
+
     if (enemyType === 'superElite') {
         const lootOptions = [
             {type: 'money', value: 500}, {type: 'money', value: 1000},
@@ -1460,20 +1507,24 @@ function dropLoot(x, y, enemyType) {
         }
         return;
     }
-    if (enemyType === 'elite' && !player.blueprints.machineGun && player.carryingBlueprints.indexOf('machineGun') === -1 && Math.random() < 0.05) {
+
+    // 3.3 Blueprint Hardening: Comprehensive check for Machine Gun blueprint
+    if (enemyType === 'elite' && !player.fabricated.machineGun && !player.installedBlueprints.machineGun && player.carryingBlueprints.indexOf('machineGun') === -1 && !mgBlueprintOnFloor && Math.random() < 0.05) {
         const validPos = findValidSpawnPoint(x, y, 30, 30);
         worldState.pickups.push({type:'blueprint', id: 'machineGun', x: validPos.x, y: validPos.y, size: 30});
         return;
     }
+
     if (enemyType === 'juggernaut') {
-        if (!player.fabricated.nitroBoost && player.carryingBlueprints.indexOf('nitroBoost') === -1 && Math.random() < 0.25) {
+        // 3.3 Blueprint Hardening: Comprehensive check for Nitro Boost blueprint
+        if (!player.fabricated.nitroBoost && !player.installedBlueprints.nitroBoost && player.carryingBlueprints.indexOf('nitroBoost') === -1 && !nbBlueprintOnFloor && Math.random() < 0.25) {
             const validPos = findValidSpawnPoint(x, y, 30, 30);
             worldState.pickups.push({type:'blueprint', id: 'nitroBoost', x: validPos.x, y: validPos.y, size: 30});
             return;
         } else {
             const lootOptions = [
-                {type: 'money', value: 400}, {type: 'money', value: 1000},
-                {type: 'money', value: 2000}, {type: 'blueHeart'}
+                {type: 'money', value: 500}, {type: 'money', value: 2000},
+                {type: 'money', value: 2500}, {type: 'blueHeart'}
             ];
             const loot = lootOptions[Math.floor(Math.random() * lootOptions.length)];
             if (loot.type === 'money') {
@@ -2183,6 +2234,7 @@ function saveGame() {
             blueprints: player.blueprints,
             fabricated: player.fabricated,
             installedBlueprints: player.installedBlueprints,
+            carryingBlueprints: player.carryingBlueprints,
             equipment: player.equipment,
             cashBayTier: worldState.base.cashBay?.tier ?? 0,
             medBayTier: worldState.base.medBay?.tier ?? 0,
@@ -2231,6 +2283,7 @@ function loadGame() {
         player.blueprints = data.blueprints;
         player.fabricated = data.fabricated;
         player.installedBlueprints = data.installedBlueprints;
+        player.carryingBlueprints = data.carryingBlueprints || [];
         player.equipment = data.equipment;
         player.x = data.playerX;
         player.y = data.playerY;
@@ -2483,11 +2536,8 @@ function setupGlobalListeners() {
 
     const toggleMasterAudio = () => {
         if (!isAudioInitialized) return;
-        isMuted = !isMuted;
+        isMuted = !isM్యూted;
         Tone.getDestination().mute = isMuted;
-        if (engineAudioContext && engineMasterVolumeNode) {
-            engineMasterVolumeNode.gain.value = isMuted ? 0 : MASTER_VOLUME;
-        }
         updateAudioToggleUI();
     };
 
