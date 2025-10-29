@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Tank Tycoon (Pre-Alpha 4.7)</title>
+    <title>Tank Tycoon (Pre-Alpha 4.9)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
         /* --- Base Styles --- */
         html, body { height: 100%; width: 100%; overflow: hidden; margin: 0; padding: 0; background-color: #2D3748; }
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: Arial, sans-serif;
             background-color: #1a202c;
             color: #F7FAFC;
             touch-action: none;
@@ -382,7 +381,7 @@
 
 <script>
 // --- SETUP & STATE ---
-const GAME_VERSION = "Pre-Alpha 4.7";
+const GAME_VERSION = "Pre-Alpha 4.9";
 const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
 const gameContainer = document.getElementById('game-container');
 const world = { width: 4000, height: 4000, gridSize: 40, chunkSize: 16 * 40 };
@@ -788,9 +787,9 @@ function drawCrackedBlock(x, y, width, height, color, crackCoords, speckles) {
     }
     if (crackCoords) { ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2; for (const crack of crackCoords) { ctx.beginPath(); ctx.moveTo(x + crack.x1, y + crack.y1); ctx.lineTo(x + crack.x2, y + crack.y2); ctx.stroke(); } }
 }
-function drawCashBay(x, y, width, height) { ctx.fillStyle = '#166534'; ctx.fillRect(x, y, width, height); ctx.fillStyle = '#22c55e'; ctx.font = 'bold 60px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('$', x + width / 2, y + height / 2); }
-function drawCashBag(x, y, size) { ctx.fillStyle = '#166534'; ctx.beginPath(); ctx.roundRect(x, y, size, size, [8]); ctx.fill(); ctx.strokeStyle = 'black'; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = '#fBBF24'; ctx.font = 'bold 24px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('$', x + size / 2, y + size / 2); }
-function drawMedBayPad(x, y, width, height) { ctx.fillStyle = '#166534'; ctx.fillRect(x, y, width, height); ctx.fillStyle = '#22c55e'; ctx.font = 'bold 60px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+', x + width / 2, y + height / 2); }
+function drawCashBay(x, y, width, height) { ctx.fillStyle = '#166534'; ctx.fillRect(x, y, width, height); ctx.fillStyle = '#22c55e'; ctx.font = 'bold 60px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('$', x + width / 2, y + height / 2); }
+function drawCashBag(x, y, size) { ctx.fillStyle = '#166534'; ctx.beginPath(); ctx.roundRect(x, y, size, size, [8]); ctx.fill(); ctx.strokeStyle = 'black'; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = '#fBBF24'; ctx.font = 'bold 24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('$', x + size / 2, y + size / 2); }
+function drawMedBayPad(x, y, width, height) { ctx.fillStyle = '#166534'; ctx.fillRect(x, y, width, height); ctx.fillStyle = '#22c55e'; ctx.font = 'bold 60px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+', x + width / 2, y + height / 2); }
 function drawGarage(x, y, width, height) { ctx.fillStyle = '#475569'; ctx.fillRect(x, y, width, height); ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 4; ctx.strokeRect(x, y, width, height); ctx.fillStyle = '#334155'; ctx.fillRect(x + 5, y + 5, width - 10, height - 10); const doorWidth = width * 0.8; const doorX = x + (width - doorWidth) / 2; ctx.fillStyle = '#1e293b'; ctx.fillRect(doorX, y + 5, doorWidth, height - 10); ctx.strokeStyle = '#475569'; ctx.lineWidth = 2; for(let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(doorX, y + 5 + i * (height-10)/4); ctx.lineTo(doorX + doorWidth, y + 5 + i * (height-10)/4); ctx.stroke(); } }
 function drawBlueprint(x, y, size, id) {
     ctx.font = `${size * 0.8}px sans-serif`;
@@ -1902,9 +1901,9 @@ function drawDynamicElements() {
     for (const p of worldState.pickups) {
         if (p.type === 'cashBag' && p.worldId !== currentWorldId) continue;
 
-        if (p.type === 'money') { ctx.strokeStyle = 'black'; ctx.lineWidth = 4; ctx.strokeRect(p.x - 12, p.y - 8, 24, 16); ctx.fillStyle = '#22c55e'; ctx.fillRect(p.x - 12, p.y - 8, 24, 16); ctx.fillStyle='white'; ctx.font='bold 12px Inter'; ctx.textAlign = 'center'; ctx.fillText(`$${p.value}`, p.x, p.y+4); } else if (p.type === 'heart') { drawStroked(() => { ctx.fillStyle = '#e11d48'; ctx.beginPath(); ctx.moveTo(p.x, p.y - p.radius / 2); ctx.bezierCurveTo(p.x, p.y - p.radius, p.x - p.radius, p.y - p.radius, p.x - p.radius, p.y); ctx.bezierCurveTo(p.x - p.radius, p.y + p.radius / 2, p.x, p.y + p.radius, p.x, p.y + p.radius); ctx.bezierCurveTo(p.x, p.y + p.radius, p.x + p.radius, p.y + p.radius / 2, p.x + p.radius, p.y); ctx.bezierCurveTo(p.x + p.radius, p.y - p.radius, p.x, p.y - p.radius, p.x, p.y - p.radius / 2); ctx.fill(); }); } else if (p.type === 'cashBag') { drawCashBag(p.x, p.y, p.size); } else if (p.type === 'blueprint') { drawBlueprint(p.x, p.y, p.size, p.id); } else if (p.type === 'blueHeart') { drawBlueHeart(p.x, p.y, p.radius); } 
+        if (p.type === 'money') { ctx.strokeStyle = 'black'; ctx.lineWidth = 4; ctx.strokeRect(p.x - 12, p.y - 8, 24, 16); ctx.fillStyle = '#22c55e'; ctx.fillRect(p.x - 12, p.y - 8, 24, 16); ctx.fillStyle='white'; ctx.font='bold 12px "Times New Roman", serif'; ctx.textAlign = 'center'; ctx.fillText(`$${p.value}`, p.x, p.y+4); } else if (p.type === 'heart') { drawStroked(() => { ctx.fillStyle = '#e11d48'; ctx.beginPath(); ctx.moveTo(p.x, p.y - p.radius / 2); ctx.bezierCurveTo(p.x, p.y - p.radius, p.x - p.radius, p.y - p.radius, p.x - p.radius, p.y); ctx.bezierCurveTo(p.x - p.radius, p.y + p.radius / 2, p.x, p.y + p.radius, p.x, p.y + p.radius); ctx.bezierCurveTo(p.x, p.y + p.radius, p.x + p.radius, p.y + p.radius / 2, p.x + p.radius, p.y); ctx.bezierCurveTo(p.x + p.radius, p.y - p.radius, p.x, p.y - p.radius, p.x, p.y - p.radius / 2); ctx.fill(); }); } else if (p.type === 'cashBag') { drawCashBag(p.x, p.y, p.size); } else if (p.type === 'blueprint') { drawBlueprint(p.x, p.y, p.size, p.id); } else if (p.type === 'blueHeart') { drawBlueHeart(p.x, p.y, p.radius); } 
     }
-    for (const p of worldState.particles) { ctx.globalAlpha = p.life / 100; if (p.type === 'splash') { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill(); } else if (p.type === 'money') { ctx.fillStyle = p.color; ctx.font = 'bold 16px Inter'; ctx.textAlign = 'center'; ctx.fillText('$', p.x, p.y); } else if (p.type === 'heal') { ctx.fillStyle = '#22c55e'; ctx.font = 'bold 24px Inter'; ctx.textAlign = 'center'; ctx.fillText('+', p.x, p.y); } ctx.globalAlpha = 1.0; }
+    for (const p of worldState.particles) { ctx.globalAlpha = p.life / 100; if (p.type === 'splash') { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill(); } else if (p.type === 'money') { ctx.fillStyle = p.color; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.fillText('$', p.x, p.y); } else if (p.type === 'heal') { ctx.fillStyle = '#22c55e'; ctx.font = 'bold 24px Arial'; ctx.textAlign = 'center'; ctx.fillText('+', p.x, p.y); } ctx.globalAlpha = 1.0; }
     for (const b of worldState.bullets) { ctx.fillStyle='black';ctx.beginPath();ctx.arc(b.x,b.y,b.radius,0,Math.PI*2);ctx.fill();ctx.fillStyle=b.owner==='player'?'#FBBF24':'#f472b6';ctx.beginPath();ctx.arc(b.x,b.y,b.radius-2,0,Math.PI*2);ctx.fill(); }
 for (const e of worldState.enemies) {
         let bodyColor, turretColor;
@@ -1958,24 +1957,24 @@ function drawOnscreenUI() {
         const cashBay = worldState.base.cashBay;
         const data = cashBayUpgrades[cashBay.tier - 1];
         const incomeText = `${formatMoney(data.passive).replace('.00','')}-${formatMoney(data.active).replace('.00','')}/s`;
-        ctx.font = 'bold 16px Inter';
+        ctx.font = 'bold 16px Arial';
         ctx.fillStyle = 'white';
         ctx.fillText('CASH BAY', cashBay.x + cashBay.width / 2, cashBay.y - 25);
-        ctx.font = '14px Inter';
+        ctx.font = '14px Arial';
         ctx.fillText(`Level ${cashBay.tier}: $${incomeText}`, cashBay.x + cashBay.width / 2, cashBay.y - 8);
     }
      if (worldState.base.medBay && worldState.base.medBay.tier > 0) {
         const medBay = worldState.base.medBay;
         const data = medBayUpgrades[medBay.tier];
-        ctx.font = 'bold 16px Inter';
+        ctx.font = 'bold 16px Arial';
         ctx.fillStyle = 'white';
         ctx.fillText('MED BAY', medBay.x + medBay.width / 2, medBay.y - 25);
-        ctx.font = '14px Inter';
+        ctx.font = '14px Arial';
         ctx.fillText(`Level ${medBay.tier}: ${data.heal} hp/s, max: ${data.maxHp}`, medBay.x + medBay.width / 2, medBay.y - 8);
     }
     if (worldState.base.garage && worldState.base.garage.tier > 0) {
         const garage = worldState.base.garage;
-        ctx.font = 'bold 16px Inter';
+        ctx.font = 'bold 16px Arial';
         ctx.fillStyle = 'white';
         ctx.fillText('GARAGE', garage.x + garage.width / 2, garage.y - 15);
     }
@@ -1985,14 +1984,14 @@ function drawOnscreenUI() {
     if (cashPadTier < cashBayUpgrades.length) {
         const cost = cashBayUpgrades[cashPadTier].cost;
         if (cashPadTier === 0) {
-            ctx.font = 'bold 16px Inter';
+            ctx.font = 'bold 16px Arial';
             ctx.fillStyle = 'white';
             ctx.fillText('Purchase Cash Bay', cashPad.x + world.gridSize / 2, cashPad.y + world.gridSize + 15);
-            ctx.font = '14px Inter';
+            ctx.font = '14px Arial';
             ctx.fillStyle = '#fbbf24';
             ctx.fillText(`Cost: $${formatMoney(cost)}`, cashPad.x + world.gridSize / 2, cashPad.y + world.gridSize + 35);
         } else {
-            ctx.font = 'bold 16px Inter';
+            ctx.font = 'bold 16px Arial';
             ctx.fillStyle = '#fbbf24';
             ctx.fillText(`Upgrade: $${formatMoney(cost)}`, cashPad.x + world.gridSize / 2, cashPad.y + world.gridSize + 25);
         }
@@ -2003,14 +2002,14 @@ function drawOnscreenUI() {
     if (medPadTier < medBayUpgrades.length - 1) {
         const cost = medBayUpgrades[medPadTier + 1].cost;
         if (medPadTier === 0) {
-            ctx.font = 'bold 16px Inter';
+            ctx.font = 'bold 16px Arial';
             ctx.fillStyle = 'white';
             ctx.fillText('Purchase Med Bay', medPad.x + world.gridSize / 2, medPad.y + world.gridSize + 15);
-            ctx.font = '14px Inter';
+            ctx.font = '14px Arial';
             ctx.fillStyle = '#fbbf24';
             ctx.fillText(`Cost: $${formatMoney(cost)}`, medPad.x + world.gridSize / 2, medPad.y + world.gridSize + 35);
         } else {
-            ctx.font = 'bold 16px Inter';
+            ctx.font = 'bold 16px Arial';
             ctx.fillStyle = '#fbbf24';
             ctx.fillText(`Upgrade: $${formatMoney(cost)}`, medPad.x + world.gridSize / 2, medPad.y + world.gridSize + 25);
         }
@@ -2018,10 +2017,10 @@ function drawOnscreenUI() {
 
     const garagePad = worldState.base.pads.find(p => p.type === 'garage');
     if (worldState.base.garage.tier === 0 && worldState.base.cashBay.tier >= 1 && worldState.base.medBay.tier >= 1) {
-        ctx.font = 'bold 16px Inter';
+        ctx.font = 'bold 16px Arial';
         ctx.fillStyle = 'white';
         ctx.fillText('Purchase Garage', garagePad.x + world.gridSize / 2, garagePad.y + world.gridSize + 15);
-        ctx.font = '14px Inter';
+        ctx.font = '14px Arial';
         ctx.fillStyle = '#fbbf24';
         ctx.fillText(`Cost: $${formatMoney(GARAGE_UNLOCK_COST)}`, garagePad.x + world.gridSize / 2, garagePad.y + world.gridSize + 35);
     }
@@ -2057,7 +2056,7 @@ function drawPingLine(startX, startY, endX, endY, color, text) {
     }
 
     // Draw text
-    ctx.font = 'bold 20px Inter';
+    ctx.font = 'bold 20px Arial';
     ctx.textAlign = 'center';
     ctx.shadowColor = 'black';
     ctx.shadowBlur = 4;
