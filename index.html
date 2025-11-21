@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Tank Tycoon (Pre-Alpha 4.9)</title>
+    <title>Tank Tycoon (Pre-Alpha 5.15)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <style>
@@ -381,9 +381,10 @@
 
 <script>
 // --- SETUP & STATE ---
-const GAME_VERSION = "Pre-Alpha 4.9";
+const GAME_VERSION = "Pre-Alpha 5.15";
 const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
 const gameContainer = document.getElementById('game-container');
+const TARGET_DT = 1000 / 60; // The ideal time for one frame at 60fps
 const world = { width: 4000, height: 4000, gridSize: 40, chunkSize: 16 * 40 };
 let camera = { x: 0, y: 0, width: 0, height: 0, targetX: 0, targetY: 0, shake: 0, zoom: 1.0 };
 let player, keys, touchState, sfx, playerStats, achievements;
@@ -476,7 +477,7 @@ const medBayUpgrades = [
 const GARAGE_UNLOCK_COST = 250;
 
 // --- DYNAMIC ENGINE SOUND SYSTEM ---
-let enginePlayer; let engineFadeNode;
+let enginePlayer; let engineFadeNode; let isEngineSoundReady = false;
 const engineAudioUrl = 'https://dl.dropboxusercontent.com/scl/fi/3vkvoeltskmfuhnuoly2m/engine_trimmed_loopable.mp3?rlkey=d844chyrjkriy4ph61cyitn04&st=ehu6kt81';
 const FADE_TIME = 0.4; const MASTER_VOLUME = 10.8; const PITCH_START = 0.5; const PITCH_END = 1.0;
 async function initEngineSound() {
@@ -491,6 +492,7 @@ async function initEngineSound() {
             onload: () => {
                 console.log("Engine audio file loaded, starting playback.");
                 enginePlayer.start();
+                isEngineSoundReady = true;
             },
         }).connect(engineFadeNode);
     } catch (error) {
@@ -498,7 +500,7 @@ async function initEngineSound() {
     }
 }
 function updateEngineSound(deltaTime) {
-    if (!enginePlayer || !engineFadeNode || !player) return;
+    if (!enginePlayer || !engineFadeNode || !player || !isEngineSoundReady) return;
     const isTryingToMove = (touchState.moveStick.x !== 0 || touchState.moveStick.y !== 0) || keys.w || keys.a || keys.s || keys.d;
     const targetVolume = isTryingToMove ? 1.0 : 0.0;
     const speedRatio = Math.min(1, Math.abs(player.currentSpeed) / 2.64);
@@ -507,7 +509,7 @@ function updateEngineSound(deltaTime) {
     targetPitch *= player.pitchPenalty;
 
     engineFadeNode.gain.rampTo(targetVolume, FADE_TIME);
-    enginePlayer.playbackRate = targetPitch;
+    enginePlayer.playbackRate.value = targetPitch;
 
     if (player.pitchPenalty < 1) {
         player.pitchPenalty = Math.min(1, player.pitchPenalty + (deltaTime / 300));
@@ -539,7 +541,7 @@ function initPlayerState(fullReset = false) {
         lastUpgradedPadId: null, lastMouseMoveTime: 0, lastSplashSoundTime: 0,
         prevDx: 0, prevDy: 0, pitchPenalty: 1, lastHealParticleTime: 0, lastHealTickTime: 0,
         speed: 1.94, currentSpeed: 0,
-        acceleration: 0.025,
+        acceleration: 0.05,
         cannonTier: 1, engineTier: 1, armorTier: 0, blockChance: 0,
         deathTimestamps: [], killTimestamps: [],
         canEnterGarage: true, isOnCashBay: false, lastMoneyParticleTime: 0,
@@ -618,8 +620,6 @@ function resizeCanvas() {
 
     camera.width = newWidth / camera.zoom;
     camera.height = newHeight / camera.zoom;
-
-    if (!worldState.base.x) initWorldState();
 }
 
 
@@ -1045,12 +1045,12 @@ function spawnEnemies(count, zone, eliteChance, exclusionZones = [], juggernautC
         let enemy;
         const rand = seededRng();
         if (rand < superEliteChance) {
-             enemy = { hp: 10, maxHp: 10, width: 40, height: 40, type: 'superElite', damage: 1, fireRate: 3500, aggroRange: 500, angle: 0, isHit: false, hitTime: 0, lastShotTime: 0, speed: 1.0 };
+             enemy = { hp: 10, maxHp: 10, width: 40, height: 40, type: 'superElite', damage: 1, fireRate: 3500, aggroRange: 500, angle: 0, isHit: false, hitTime: 0, lastShotTime: 0, speed: 3.0 };
         } else if (rand < juggernautChance) {
-            enemy = { hp: 20, maxHp: 20, width: 60, height: 60, type: 'juggernaut', damage: 0.25, fireRate: 125, aggroRange: 500, angle: 0, isHit: false, hitTime: 0, lastShotTime: 0, blockChance: 0.1, speed: 1.2, burstState: { active: false, startTime: 0, duration: 4000, cooldown: 2000 } };
+            enemy = { hp: 20, maxHp: 20, width: 60, height: 60, type: 'juggernaut', damage: 0.25, fireRate: 125, aggroRange: 500, angle: 0, isHit: false, hitTime: 0, lastShotTime: 0, blockChance: 0.1, speed: 3.6, burstState: { active: false, startTime: 0, duration: 4000, cooldown: 2000 } };
         } else {
             const isElite = seededRng() < eliteChance;
-            enemy = { hp: isElite ? 4 : 2, maxHp: isElite ? 4 : 2, width: isElite ? 40 : 35, height: isElite ? 40 : 35, type: isElite ? 'elite' : 'normal', damage: 1, fireRate: isElite ? 3500 : 4000, aggroRange: isElite ? 400 : 300, angle: 0, isHit: false, hitTime: 0, lastShotTime: 0, speed: 1.0 };
+            enemy = { hp: isElite ? 4 : 2, maxHp: isElite ? 4 : 2, width: isElite ? 40 : 35, height: isElite ? 40 : 35, type: isElite ? 'elite' : 'normal', damage: 1, fireRate: isElite ? 3500 : 4000, aggroRange: isElite ? 400 : 300, angle: 0, isHit: false, hitTime: 0, lastShotTime: 0, speed: 2.0 };
         }
         
         const validPos = findValidSpawnPoint(spawnX, spawnY, enemy.width, enemy.height);
@@ -1059,6 +1059,7 @@ function spawnEnemies(count, zone, eliteChance, exclusionZones = [], juggernautC
         enemy.targetPos = { x: validPos.x, y: validPos.y };
         worldState.enemies.push(enemy);
     }
+    console.log(`spawnEnemies complete for this zone. Total enemies now: ${worldState.enemies.length}`);
 }
 // --- 2.4 SPATIAL GRID LOGIC ---
 class SpatialGrid {
@@ -1289,7 +1290,7 @@ function checkCollision(x, y, width = player.width, height = player.height) {
     
     return isCollidingWithObject(x, y, width, height);
 }
-function updatePlayer(deltaTime) {
+function updatePlayer(deltaTime, timeScale) {
     if (player.isDead || isGameBlocked) return;
     const now = Date.now();
 
@@ -1356,9 +1357,11 @@ function updatePlayer(deltaTime) {
 
     let speedModifier = 1.0;
     if (player.boost.isBoosting) speedModifier *= 3;
-    player.currentSpeed += (targetSpeed - player.currentSpeed) * player.acceleration; 
+    // This is a frame-rate independent interpolation for smooth acceleration.
+    const adjustedAcceleration = 1 - Math.pow(1 - player.acceleration, timeScale);
+    player.currentSpeed += (targetSpeed - player.currentSpeed) * adjustedAcceleration;
     
-    const pCenterX = player.x + player.width/2, pCenterY = player.y + player.height/2; 
+    const pCenterX = player.x + player.width/2, pCenterY = player.y + player.height/2;
     const tileX = Math.floor(pCenterX / world.gridSize);
     const tileY = Math.floor(pCenterY / world.gridSize);
     let isActuallyInWater = false;
@@ -1440,7 +1443,7 @@ function updateShooting() {
         });
     }
 }
-function updateEnemies() {
+function updateEnemies(timeScale) {
     const now = Date.now();
     worldState.deadEnemies = worldState.deadEnemies.filter(de => now - de.time < 2000);
     for (const e of worldState.enemies) {
@@ -1463,8 +1466,9 @@ function updateEnemies() {
                 }
                 
                 if (e.isFollowing) {
-                    const nextX = e.x + Math.cos(e.angle) * e.speed;
-                    const nextY = e.y + Math.sin(e.angle) * e.speed;
+                    const finalSpeed = e.speed * timeScale;
+                    const nextX = e.x + Math.cos(e.angle) * finalSpeed;
+                    const nextY = e.y + Math.sin(e.angle) * finalSpeed;
                     if (!isCollidingWithObject(nextX, e.y, e.width, e.height)) e.x = nextX;
                     if (!isCollidingWithObject(e.x, nextY, e.width, e.height)) e.y = nextY;
                 }
@@ -1478,7 +1482,7 @@ function updateEnemies() {
                         e.burstState.startTime = now;
                     } else if (now - e.lastShotTime > e.fireRate) {
                         e.lastShotTime = now;
-                        worldState.bullets.push({ owner: e.type, x: e.x + e.width / 2, y: e.y + e.height / 2, dx: Math.cos(e.angle) * 6, dy: Math.sin(e.angle) * 6, radius: 6, damage: e.damage });
+                        worldState.bullets.push({ owner: e.type, x: e.x + e.width / 2, y: e.y + e.height / 2, dx: Math.cos(e.angle) * 12, dy: Math.sin(e.angle) * 12, radius: 6, damage: e.damage });
                     }
                 } else {
                     if (now - e.burstState.startTime > e.burstState.cooldown) {
@@ -1494,7 +1498,7 @@ function updateEnemies() {
                     if (e.type === 'superElite') bulletCount = 3;
                     
                     const burstDelay = 100;
-                    worldState.activeBursts.push({ owner: e.type, x: e.x + e.width / 2, y: e.y + e.height / 2, angle: e.angle, totalShots: bulletCount, shotsFired: 0, delay: burstDelay, nextShotTime: now, bulletSpeed: 4, bulletDamage: e.damage, ownerWidth: e.width });
+                    worldState.activeBursts.push({ owner: e.type, x: e.x + e.width / 2, y: e.y + e.height / 2, angle: e.angle, totalShots: bulletCount, shotsFired: 0, delay: burstDelay, nextShotTime: now, bulletSpeed: 8, bulletDamage: e.damage, ownerWidth: e.width });
                 }
             }
         } else {
@@ -1506,9 +1510,10 @@ function updateEnemies() {
                 e.targetPos.x = e.wanderBox.x + Math.random() * e.wanderBox.width;
                 e.targetPos.y = e.wanderBox.y + Math.random() * e.wanderBox.height;
             }
+            const wanderSpeed = 1.0 * timeScale;
             e.angle = Math.atan2(e.targetPos.y - e.y, e.targetPos.x - e.x);
-            e.x = clamp(e.x + Math.cos(e.angle) * 0.5, 0, world.width - e.width);
-            e.y = clamp(e.y + Math.sin(e.angle) * 0.5, 0, world.height - e.height);
+            e.x = clamp(e.x + Math.cos(e.angle) * wanderSpeed, 0, world.width - e.width);
+            e.y = clamp(e.y + Math.sin(e.angle) * wanderSpeed, 0, world.height - e.height);
         }
     }
 }
@@ -1565,13 +1570,13 @@ function dropLoot(x, y, enemyType) {
     }
 
     const rand = Math.random(); let loot; if (enemyType === 'elite') { if (rand < 0.33) loot = {type:'money', value: 50 }; else if (rand < 0.66) loot = {type:'money', value: 100 }; else loot = {type:'money', value: 500 }; } else { if (rand < 0.25) loot = {type:'money', value: 5 }; else if (rand < 0.5) loot = {type:'money', value: 10 }; else if (rand < 0.75) loot = {type:'money', value: 25 }; else loot = {type:'heart', count: 1 }; } if (loot.type === 'heart') { for (let i = 0; i < loot.count; i++) { const validPos = findValidSpawnPoint(x + (i * 20 - 10), y, 30, 30); worldState.pickups.push({type:'heart', x: validPos.x, y: validPos.y, radius: 15}); } } else { const validPos = findValidSpawnPoint(x, y, 24, 16); worldState.pickups.push({type:'money', value: loot.value, x: validPos.x, y: validPos.y, radius: 10}); } }
-function updateBullets() {
+function updateBullets(timeScale) {
     for (let i = worldState.bullets.length - 1; i >= 0; i--) {
         const b = worldState.bullets[i];
         if (!b) continue;
 
-        b.x += b.dx;
-        b.y += b.dy;
+        b.x += b.dx * timeScale;
+        b.y += b.dy * timeScale;
 
         // 1. Check if bullet is out of bounds
         if (b.x < camera.x - 100 || b.x > camera.x + camera.width + 100 || b.y < camera.y - 100 || b.y > camera.y + camera.height + 100) {
@@ -1738,7 +1743,7 @@ function updateIncome(deltaTime) {
 function createSplashParticles(x, y) { const color = 'rgba(0, 100, 255, 0.5)'; for (let i = 0; i < 8; i++) { const angle = Math.random() * Math.PI * 2; const speed = Math.random() * 1.5 + 0.5; worldState.particles.push({ x, y, dx: Math.cos(angle) * speed, dy: Math.sin(angle) * speed, life: Math.random() * 30 + 20, color: color, radius: Math.random() * 2 + 1, type: 'splash' }); } }
 function createHealParticle(x, y) { worldState.particles.push({ x, y, dx: (Math.random() - 0.5) * 0.3, dy: -(Math.random() * 0.8 + 0.8), life: Math.random() * 60 + 50, type: 'heal' }); }
 function createMoneyParticle(x, y) { worldState.particles.push({ x: x + (Math.random() - 0.5) * world.gridSize * 2, y: y + (Math.random() - 0.5) * world.gridSize * 2, dx: (Math.random() - 0.5) * 0.5, dy: - (Math.random() * 0.5 + 0.5), life: Math.random() * 40 + 30, color: `rgba(251, 191, 36, ${Math.random() * 0.5 + 0.5})`, type: 'money' }); }
-function updateParticles() { for (let i = worldState.particles.length - 1; i >= 0; i--) { const p = worldState.particles[i]; p.x += p.dx; p.y += p.dy; p.life--; if (p.life <= 0) { worldState.particles.splice(i, 1); } } }
+function updateParticles(timeScale) { for (let i = worldState.particles.length - 1; i >= 0; i--) { const p = worldState.particles[i]; p.x += p.dx * timeScale; p.y += p.dy * timeScale; p.life--; if (p.life <= 0) { worldState.particles.splice(i, 1); } } }
 function updateAchievements(deltaTime) {
     const now = Date.now();
     player.deathTimestamps = player.deathTimestamps.filter(t => t > now - 5 * 60 * 1000);
@@ -2210,12 +2215,12 @@ function updateWeaponStats() {
         const upgrade = garageStandardCannonUpgrades[player.cannonTier - 1];
         player.fireRate = 1000;
         player.bulletDamage = upgrade.stats['Damage'];
-        player.bulletSpeed = (upgrade.stats['Bullet Speed'] / 100) * 6; // Convert % to base speed
+        player.bulletSpeed = (upgrade.stats['Bullet Speed'] / 100) * 12; // Convert % to base speed
         player.burstCount = upgrade.stats['Fire Rate'] > 1 ? upgrade.stats['Fire Rate'] : 1;
     } else if (player.equipment.turret === 'machineGun') {
         player.fireRate = 125;
         player.bulletDamage = 0.30;
-        player.bulletSpeed = 8;
+        player.bulletSpeed = 16;
         player.burstCount = 1;
     }
 }
@@ -2464,9 +2469,22 @@ function gameLoop(timestamp) {
     }
 
     if (isPaused || isTransitioning) { lastTime = timestamp; animationFrameId = requestAnimationFrame(gameLoop); return; }
-    if (!lastTime) lastTime = timestamp;
+
+    // On the very first frame, just set lastTime and skip the loop to avoid a zero deltaTime.
+    if (!lastTime) {
+        lastTime = timestamp;
+        animationFrameId = requestAnimationFrame(gameLoop);
+        return;
+    }
+
     const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
+
+    // Guard clause for abnormally long frames (e.g., tab-out) to prevent physics bugs.
+    if (deltaTime > 500) {
+        animationFrameId = requestAnimationFrame(gameLoop);
+        return;
+    }
 
     if (isConsoleVisible) {
         document.getElementById('on-screen-console').textContent = `dT: ${deltaTime.toFixed(2)}ms`;
@@ -2478,15 +2496,17 @@ function gameLoop(timestamp) {
         saveGame(0); // Pass slot 0 for single save
     }
     
+    const timeScale = deltaTime / TARGET_DT;
+    
     updateSpatialGrid();
 
     if (!isPlayerInGarage) {
-        updatePlayer(deltaTime);
+        updatePlayer(deltaTime, timeScale);
         updateShooting();
         updatePickups();
         updateCamera();
-        updateEnemies();
-        updateBullets();
+        updateEnemies(timeScale);
+        updateBullets(timeScale);
         updateBursts();
         updateBase(deltaTime);
         updateAchievements(deltaTime);
@@ -2821,8 +2841,8 @@ function setupInputs(isMobile) {
     if (isMobile) {
         const moveStickArea = document.getElementById('move-stick-area'), moveStickThumb = document.getElementById('move-stick-thumb'), aimStickArea = document.getElementById('aim-stick-area'), aimStickThumb = document.getElementById('aim-stick-thumb'), shootBtn = document.getElementById('shoot-btn'), reloadBtn = document.getElementById('reload-btn'), boostBtn = document.getElementById('boost-btn');
         const handleStick = (touch, stick, thumb, vector) => { const rect = stick.getBoundingClientRect(); const start = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }; const maxDist = 60; let dx = touch.clientX - start.x, dy = touch.clientY - start.y; const dist = Math.hypot(dx, dy); if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; } thumb.style.transform = `translate(${dx}px, ${dy}px)`; if (dist > 10) { vector.x = dx / dist; vector.y = dy / dist; } else { vector.x = 0; vector.y = 0; } };
-        window.addEventListener('touchstart', (e) => { e.preventDefault(); for (const touch of e.changedTouches) { const x = touch.clientX, y = touch.clientY; const moveRect = moveStickArea.getBoundingClientRect(), aimRect = aimStickArea.getBoundingClientRect(), fireRect = shootBtn.getBoundingClientRect(), reloadRect = reloadBtn.getBoundingClientRect(), boostRect = boostBtn.getBoundingClientRect(); if (touchState.moveTouchId === null && x > moveRect.left && x < moveRect.right && y > moveRect.top && y < moveRect.bottom) { touchState.moveTouchId = touch.identifier; } else if (touchState.aimTouchId === null && x > aimRect.left && x < aimRect.right && y > aimRect.top && y < aimRect.bottom) { touchState.aimTouchId = touch.identifier; } else if (touchState.fireTouchId === null && x > fireRect.left && x < fireRect.right && y > fireRect.top && y < fireRect.bottom) { touchState.fireTouchId = touch.identifier; shootBtn.classList.add('active'); } else if (touchState.reloadTouchId === null && reloadBtn.style.display !== 'none' && x > reloadRect.left && x < reloadRect.right && y > reloadRect.top && y < reloadRect.bottom) { touchState.reloadTouchId = touch.identifier; reloadBtn.classList.add('active'); keys.r = true; } else if (touchState.boostTouchId === null && boostBtn.style.display !== 'none' && x > boostRect.left && x < boostRect.right && y > boostRect.top && y < boostRect.bottom) { touchState.boostTouchId = touch.identifier; boostBtn.classList.add('active'); keys.shift = true; } } }, { passive: false });
-        window.addEventListener('touchmove', (e) => { e.preventDefault(); for (const touch of e.touches) { if (touch.identifier === touchState.moveTouchId) handleStick(touch, moveStickArea, moveStickThumb, touchState.moveStick); if (touch.identifier === touchState.aimTouchId) handleStick(touch, aimStickArea, aimStickThumb, touchState.aimStick); } }, { passive: false });
+        window.addEventListener('touchstart', (e) => { for (const touch of e.changedTouches) { const x = touch.clientX, y = touch.clientY; const moveRect = moveStickArea.getBoundingClientRect(), aimRect = aimStickArea.getBoundingClientRect(), fireRect = shootBtn.getBoundingClientRect(), reloadRect = reloadBtn.getBoundingClientRect(), boostRect = boostBtn.getBoundingClientRect(); if (touchState.moveTouchId === null && x > moveRect.left && x < moveRect.right && y > moveRect.top && y < moveRect.bottom) { touchState.moveTouchId = touch.identifier; } else if (touchState.aimTouchId === null && x > aimRect.left && x < aimRect.right && y > aimRect.top && y < aimRect.bottom) { touchState.aimTouchId = touch.identifier; } else if (touchState.fireTouchId === null && x > fireRect.left && x < fireRect.right && y > fireRect.top && y < fireRect.bottom) { touchState.fireTouchId = touch.identifier; shootBtn.classList.add('active'); } else if (touchState.reloadTouchId === null && reloadBtn.style.display !== 'none' && x > reloadRect.left && x < reloadRect.right && y > reloadRect.top && y < reloadRect.bottom) { touchState.reloadTouchId = touch.identifier; reloadBtn.classList.add('active'); keys.r = true; } else if (touchState.boostTouchId === null && boostBtn.style.display !== 'none' && x > boostRect.left && x < boostRect.right && y > boostRect.top && y < boostRect.bottom) { touchState.boostTouchId = touch.identifier; boostBtn.classList.add('active'); keys.shift = true; } } }, { passive: true });
+        window.addEventListener('touchmove', (e) => { for (const touch of e.touches) { if (touch.identifier === touchState.moveTouchId) handleStick(touch, moveStickArea, moveStickThumb, touchState.moveStick); if (touch.identifier === touchState.aimTouchId) handleStick(touch, aimStickArea, aimStickThumb, touchState.aimStick); } }, { passive: true });
         window.addEventListener('touchend', (e) => { e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === touchState.moveTouchId) { touchState.moveTouchId = null; moveStickThumb.style.transform = `translate(0px, 0px)`; touchState.moveStick.x = 0; touchState.moveStick.y = 0; } if (touch.identifier === touchState.aimTouchId) { touchState.aimTouchId = null; aimStickThumb.style.transform = `translate(0px, 0px)`; touchState.aimStick.x = 0; touchState.aimStick.y = 0; } if (touch.identifier === touchState.fireTouchId) { touchState.fireTouchId = null; shootBtn.classList.remove('active'); } if (touch.identifier === touchState.reloadTouchId) { touchState.reloadTouchId = null; reloadBtn.classList.remove('active'); keys.r = false; } if (touch.identifier === touchState.boostTouchId) { touchState.boostTouchId = null; boostBtn.classList.remove('active'); keys.shift = false; } } }, { passive: false });
     } else { 
         canvas.addEventListener('mousemove', (e) => { const rect = canvas.getBoundingClientRect(); const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top; const playerScreenX = (player.x - camera.x + player.width / 2) * (rect.width / camera.width); const playerScreenY = (player.y - camera.y + player.height / 2) * (rect.height / camera.height); player.turretAngle = Math.atan2(mouseY - playerScreenY, mouseX - playerScreenX); player.lastMouseMoveTime = Date.now(); }); 
